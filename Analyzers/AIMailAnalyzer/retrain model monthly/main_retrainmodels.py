@@ -22,13 +22,13 @@ TRAINERS = [
 ]
 
 
-def main(dataset_dir):
+def main(dataset_dir, run_timestamp=None):
     if not os.path.exists(dataset_dir):
         print(f"❌ ERREUR: Le dossier '{dataset_dir}' n'existe pas!")
         sys.exit(1)
 
     dataset_name = os.path.basename(os.path.normpath(dataset_dir))
-    run_timestamp = datetime.now().strftime("%Y-%m-%d_%H%M%S")
+    run_timestamp = run_timestamp or datetime.now().strftime("%Y-%m-%d_%H%M%S")
     base_output_dir = os.path.join(f"{dataset_name}_results", run_timestamp)
     os.makedirs(base_output_dir, exist_ok=True)
 
@@ -124,6 +124,14 @@ Exemples d'utilisation:
         default=None,
         help="Chemin vers le dossier dataset (alternative au positionnel)",
     )
+    parser.add_argument(
+        "--run-timestamp",
+        dest="run_timestamp",
+        default=None,
+        help="Force le timestamp du run (format YYYY-MM-DD_HHMMSS) au lieu de l'heure "
+             "d'exécution réelle - utile pour faire correspondre le run au mois des "
+             "données collectées plutôt qu'à la date d'entraînement.",
+    )
 
     args = parser.parse_args()
 
@@ -131,4 +139,4 @@ Exemples d'utilisation:
     if not dataset_dir:
         parser.error("Vous devez fournir le dossier dataset (positionnel ou --dataset)")
 
-    sys.exit(main(dataset_dir))
+    sys.exit(main(dataset_dir, run_timestamp=args.run_timestamp))

@@ -158,7 +158,11 @@ def main():
         print(f"\n❌ {len(blocked)} modèle(s) régressent et --force n'est pas passé: {', '.join(blocked)}")
         print("   Rien n'a été promu. Relancez avec --force pour forcer, ou n'entraînez que sur plus de données.")
         push_to_dashboard(manifest, promoted_labels=set())
-        sys.exit(1)
+        # Code dédié (≠ 1) : la régression est un comportement attendu du garde-fou
+        # F1, pas une erreur d'exécution - les appelants (run_month_replay_cycle.sh)
+        # doivent pouvoir enchaîner sur le mois suivant plutôt que de s'arrêter
+        # comme sur une vraie panne (dataset/manifest introuvable, etc.).
+        sys.exit(2)
 
     if not to_promote:
         print("\nRien à promouvoir.")

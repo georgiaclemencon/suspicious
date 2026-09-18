@@ -80,13 +80,30 @@ elif [[ $fetch_status -ne 0 ]]; then
 fi
 
 echo "--- fetch du mois OK, entraînement + promotion (sans --force) ---"
-run_trainer_shell "python3 main_retrainmodels.py data_export && python3 promote.py data_export_results/latest"
+# ";" et non "&&" : main_retrainmodels.py peut sortir en code 1 même quand
+# manifest.json/latest ont bien été écrits (un sous-modèle en échec sur un
+# mois pauvre en données, ex. début de la simulation, ne bloque QUE ce
+# modèle-là - voir son propre "modèle ignoré, les autres continuent"). Un
+# "&&" ici sauterait promote.py entièrement dans ce cas très courant, donc
+# rien ne serait poussé au dashboard pour ce mois. promote.py tolère déjà
+# les modèles absents du manifest et a sa propre détection d'échec réel
+# (manifest.json introuvable) - on lui fait confiance comme signal final.
+run_trainer_shell "python3 main_retrainmodels.py data_export; python3 promote.py data_export_results/latest"
 train_status=$?
+
+REGRESSION_BLOCKED_EXIT_CODE=2
 
 if [[ $train_status -eq 0 && -d data_export_results/latest ]]; then
   rm -rf data_base_results
   cp -r data_export_results/latest data_base_results
   echo "Baseline (data_base_results/) mise à jour pour la comparaison du mois suivant."
+elif [[ $train_status -eq $REGRESSION_BLOCKED_EXIT_CODE ]]; then
+  # Régression F1 bloquée par promote.py (mois sans assez de données pour
+  # battre la baseline, ex. début de la simulation) - pas une panne, les
+  # métriques ont quand même été poussées au dashboard. Le cycle mensuel
+  # est considéré traité pour que le rejeu enchaîne sur le mois suivant.
+  echo "Aucune promotion ce mois-ci (régression F1) - baseline inchangée, métriques poussées au dashboard."
+  train_status=0
 fi
 
 echo "===== $(date '+%Y-%m-%d %H:%M:%S') : month-replay cycle done (status=$train_status) ====="
